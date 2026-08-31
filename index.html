@@ -3,15 +3,114 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Arcadillo Games</title>
+<title>Arcadillo Games Engine Test</title>
 <style>
-body{font-family:system-ui,sans-serif;max-width:760px;margin:60px auto;padding:20px;line-height:1.6}
-.ok{padding:18px;border:1px solid #ccc;border-radius:12px}
+body{margin:0;background:#0d0e1c;color:#f2f2f7;font-family:system-ui,sans-serif}
+header{padding:22px 20px;border-bottom:1px solid #303247}
+main{max-width:1000px;margin:auto;padding:24px 20px}
+button{padding:10px 16px;margin:5px;border-radius:9px;border:1px solid #444;background:#222640;color:white;cursor:pointer}
+.card{display:inline-block;vertical-align:top;width:190px;margin:8px;padding:16px;border:1px solid #303247;border-radius:14px;background:#16182c}
+#stage{max-width:650px;margin:20px auto}
+canvas{width:100%;max-width:620px;display:block;background:#0a0b18;border-radius:18px}
+#status{padding:12px;border-radius:10px;background:#16182c;margin:15px 0}
 </style>
 </head>
 <body>
-<h1>Arcadillo Games</h1>
-<div class="ok">GitHub Pages is ready for the Arcadillo game engine.</div>
+<header><strong>ARCADILLO — ENGINE TEST</strong></header>
+<main>
+<h1>Game Engine Test</h1>
+<div id="status">Loading games.js…</div>
+<div id="games"></div>
+<div id="player" hidden>
+<button id="back">← Back to games</button>
+<h2 id="title"></h2>
+<div id="stage"></div>
+<div>
+<button id="start">Start</button>
+<button id="pause">Pause</button>
+<button id="restart">Restart</button>
+</div>
+<p id="score">Score: 0</p>
+</div>
+</main>
+
 <script src="games.js"></script>
+<script>
+(function(){
+  const status=document.getElementById('status');
+  const gamesEl=document.getElementById('games');
+  const player=document.getElementById('player');
+  const stage=document.getElementById('stage');
+  const title=document.getElementById('title');
+  const scoreEl=document.getElementById('score');
+  let current=null, controller=null;
+
+  function getGames(){
+    return window.ARCADILLO_GAMES || window.arcadilloGames ||
+      window.games || (window.ARCADILLO && window.ARCADILLO.games) || [];
+  }
+
+  function findGame(id){
+    const gs=getGames();
+    return gs.find(g=>g.id===id) || null;
+  }
+
+  function renderList(){
+    player.hidden=true; gamesEl.hidden=false;
+    const gs=getGames();
+    if(!Array.isArray(gs) || !gs.length){
+      status.textContent='games.js loaded, but it did not expose a game library. Open the browser console for details.';
+      return;
+    }
+    status.textContent='games.js loaded successfully — '+gs.length+' games found.';
+    gamesEl.innerHTML='';
+    gs.forEach(g=>{
+      const d=document.createElement('div');
+      d.className='card';
+      d.innerHTML='<h3>'+escapeHtml(g.name||g.id)+'</h3><p>'+escapeHtml(g.category||'Game')+'</p><button>Play</button>';
+      d.querySelector('button').onclick=()=>openGame(g);
+      gamesEl.appendChild(d);
+    });
+  }
+
+  function openGame(g){
+    gamesEl.hidden=true; player.hidden=false;
+    title.textContent=g.name||g.id;
+    stage.innerHTML='';
+    current=g;
+    const api={
+      setScore:n=>scoreEl.textContent='Score: '+n,
+      gameOver:msg=>{ if(msg) status.textContent=msg; },
+      sound:()=>{},
+      best:()=>0,
+      twoPlayer:()=>false,
+      difficulty:()=> 'Normal',
+      touch:'ontouchstart' in window
+    };
+    try{
+      if(typeof g.mount!=='function') throw new Error('Game has no mount() function');
+      controller=g.mount(stage,api);
+      status.textContent='Game mounted successfully. Click Start.';
+    }catch(e){
+      status.textContent='GAME MOUNT ERROR: '+e.message;
+      console.error(e);
+    }
+  }
+
+  document.getElementById('start').onclick=()=>controller&&controller.start&&controller.start();
+  document.getElementById('pause').onclick=()=>controller&&controller.pause&&controller.pause();
+  document.getElementById('restart').onclick=()=>controller&&controller.restart&&controller.restart();
+  document.getElementById('back').onclick=()=>{if(controller&&controller.destroy)controller.destroy();controller=null;renderList();};
+
+  function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+  window.addEventListener('error',e=>{
+    status.textContent='JavaScript error: '+e.message;
+    console.error(e.error||e.message);
+  });
+
+  setTimeout(renderList,100);
+})();
+</script>
 </body>
 </html>
