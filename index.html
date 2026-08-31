@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Arcadillo Game Engine Test</title>
+<style>
+body{margin:0;background:#0d0e1c;color:#f2f2f7;font-family:system-ui,sans-serif}
+main{max-width:1000px;margin:auto;padding:25px 20px}
+#status{padding:14px;border-radius:10px;background:#16182c;margin:15px 0}
+.card{display:inline-block;vertical-align:top;width:190px;margin:8px;padding:16px;border:1px solid #303247;border-radius:14px;background:#16182c}
+button{padding:10px 16px;margin:5px;border-radius:9px;border:1px solid #444;background:#222640;color:white;cursor:pointer}
+#stage{max-width:650px;margin:20px auto} canvas{width:100%;max-width:620px;background:#0a0b18;border-radius:18px}
+</style>
+</head>
+<body><main>
+<h1>Arcadillo Game Engine Test</h1>
+<div id="status">Loading games.js…</div>
+<div id="games"></div>
+<section id="player" hidden><button id="back">← Back</button><h2 id="title"></h2><div id="stage"></div>
+<button id="start">Start</button><button id="pause">Pause</button><button id="restart">Restart</button><p id="score">Score: 0</p></section>
+</main>
+<script src="games.js"></script>
+<script>
+(function(){
+ const $=id=>document.getElementById(id), status=$('status'), games=$('games'), player=$('player'), stage=$('stage');
+ let ctl=null;
+ function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+ function list(){
+   const gs=window.ARCADILLO_GAMES;
+   if(!Array.isArray(gs)){status.textContent='FAIL: '+(window.ARCADILLO_GAMES_ERROR||'game library not exposed');return;}
+   status.textContent='SUCCESS: '+gs.length+' games loaded from games.js.';
+   games.innerHTML='';
+   gs.forEach(g=>{const d=document.createElement('div');d.className='card';
+     d.innerHTML='<h3>'+esc(g.name||g.id)+'</h3><p>'+esc(g.category||'')+'</p><button>Play</button>';
+     d.querySelector('button').onclick=()=>open(g);games.appendChild(d);
+   });
+ }
+ function open(g){
+   games.hidden=true;player.hidden=false;$('title').textContent=g.name;stage.innerHTML='';
+   const api={setScore:n=>$('score').textContent='Score: '+n,gameOver:m=>{if(m)status.textContent=m},
+     sound:()=>{},best:()=>0,twoPlayer:()=>false,difficulty:()=>'Normal',touch:'ontouchstart' in window};
+   try{ctl=g.mount(stage,api);status.textContent='SUCCESS: '+g.name+' mounted. Click Start.'}
+   catch(e){status.textContent='MOUNT ERROR: '+e.message;console.error(e)}
+ }
+ $('start').onclick=()=>ctl&&ctl.start&&ctl.start();
+ $('pause').onclick=()=>ctl&&ctl.pause&&ctl.pause();
+ $('restart').onclick=()=>ctl&&ctl.restart&&ctl.restart();
+ $('back').onclick=()=>{if(ctl&&ctl.destroy)ctl.destroy();ctl=null;player.hidden=true;games.hidden=false};
+ window.addEventListener('error',e=>{status.textContent='JS ERROR: '+e.message;console.error(e)});
+ list();
+})();
+</script>
+</body></html>
